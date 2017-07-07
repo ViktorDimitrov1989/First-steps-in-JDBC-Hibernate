@@ -4,7 +4,7 @@ import java.sql.SQLException;
 
 public interface DbContext{
 
-    <E> boolean persist(E entity) throws SQLException;
+    <E> boolean persist(E entity) throws SQLException, IllegalAccessException;
 
     <E> Iterable<E> find(Class<E> table);
 

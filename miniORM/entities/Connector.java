@@ -3,7 +3,6 @@ package miniORM.entities;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
 
 public class Connector {
 
@@ -15,11 +14,8 @@ public class Connector {
                                       String dbName,
                                       String username,
                                       String password) throws SQLException {
-        /*Properties connectionProperties = new Properties();
-        connectionProperties.put("username", username);
-        connectionProperties.put("password", password);*/
 
-        String connectionString = "jdbc:" + driver + "://" + host + ":" + port + "/" + dbName;
+        String connectionString = "jdbc:" + driver + "://" + host + ":" + port + "/" + dbName + "?useSSL=false";
 
         connection = DriverManager.getConnection(connectionString,username,password);
     }

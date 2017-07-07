@@ -20,7 +20,7 @@ public class DemoORM {
             //TODO if there is no table - create, if obj exists - update else create it
             em.persist(user);
 
-        } catch (SQLException e) {
+        } catch (SQLException | IllegalAccessException e) {
             e.printStackTrace();
         }
 

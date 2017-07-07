@@ -13,7 +13,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.StringJoiner;
 
 public class EntityManager implements DbContext {
     private Connection conncetion;
@@ -30,12 +29,75 @@ public class EntityManager implements DbContext {
     }
 
     @Override
-    public <E> boolean persist(E entity) throws SQLException {
+    public <E> boolean persist(E entity) throws SQLException, IllegalAccessException {
         Field primary = this.getId(entity.getClass());
+        primary.setAccessible(true);
+
         this.doCreate(entity, primary);
 
+        Object value = primary.get(entity);
+
+        if(value == null || Long.parseLong(String.valueOf(value)) <= 0){
+            return this.doInsert(entity, primary);
+        }
+
+        return this.doUpdate(entity, primary);
+    }
+
+    private <E> boolean doUpdate(E entity, Field primary) throws IllegalAccessException {
+        String tableName = this.getTableName(entity.getClass());
+
+        String sqUpdate = "UPDATE " + tableName + " SET ";
+        String whereStatement = "WHERE ";
+
+        Field[] fields = entity.getClass().getDeclaredFields();
+
+        for (int i = 0; i < fields.length; i++) {
+            Field field = fields[i];
+            field.setAccessible(true);
+
+            if(field.getName().equals(primary.getName())){
+                String primaryColumnName = this.getFieldName(field);
+                Long primaryColumnValue = (Long) field.get(entity);
+
+                whereStatement += "`" + primaryColumnName + "`" + " = '" + primaryColumnValue + "'";
+                continue;
+            }
+
+
+        }
 
         return false;
+    }
+
+    private <E> boolean doInsert(E entity, Field primary) throws IllegalAccessException, SQLException {
+        String tableName = this.getTableName(entity.getClass());
+        
+        Field[] fields = entity.getClass().getDeclaredFields();
+
+        String columns = "";
+        String values = "";
+        for (int i = 0; i < fields.length; i++) {
+            Field field = fields[i];
+
+            //if current field is not PK field
+            if(!field.getName().equals(primary.getName())){
+                columns += "`" + this.getFieldName(field) + "`";
+                values += "`" + field.get(entity) + "`";
+                //add ", " after each field and value if it is not the last
+                if(i < fields.length - 1){
+                    columns += ", ";
+                    values += ", ";
+                }
+            }
+
+        }
+        
+        String sqlInsert = "INSERT INTO " + tableName + "("
+                + columns + ")"
+                + "VALUES(" + values + ")";
+
+        return this.conncetion.prepareStatement(sqlInsert).execute();
     }
 
     @Override
