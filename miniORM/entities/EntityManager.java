@@ -10,12 +10,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
 public class EntityManager implements DbContext {
-    private Connection conncetion;
+    private Connection connection;
 
     private PreparedStatement preparedStatement;
 
@@ -24,30 +26,30 @@ public class EntityManager implements DbContext {
     private Set<Object> persistedObejcts;
 
     public EntityManager(Connection connection) {
-        this.conncetion = connection;
+        this.connection = connection;
         this.persistedObejcts = new HashSet<>();
     }
 
     @Override
     public <E> boolean persist(E entity) throws SQLException, IllegalAccessException {
+
         Field primary = this.getId(entity.getClass());
         primary.setAccessible(true);
-
         this.doCreate(entity, primary);
 
         Object value = primary.get(entity);
-
         if(value == null || Long.parseLong(String.valueOf(value)) <= 0){
             return this.doInsert(entity, primary);
+        }else{
+            return this.doUpdate(entity, primary);
         }
 
-        return this.doUpdate(entity, primary);
     }
 
-    private <E> boolean doUpdate(E entity, Field primary) throws IllegalAccessException {
+    private <E> boolean doUpdate(E entity, Field primary) throws IllegalAccessException, SQLException {
         String tableName = this.getTableName(entity.getClass());
 
-        String sqUpdate = "UPDATE " + tableName + " SET ";
+        String sqlUpdate = "UPDATE " + tableName + " SET ";
         String whereStatement = "WHERE ";
 
         Field[] fields = entity.getClass().getDeclaredFields();
@@ -57,17 +59,28 @@ public class EntityManager implements DbContext {
             field.setAccessible(true);
 
             if(field.getName().equals(primary.getName())){
-                String primaryColumnName = this.getFieldName(field);
-                Long primaryColumnValue = (Long) field.get(entity);
+                String primaryColumnName = primary.getName();
+                Integer primaryColumnValue = Integer.parseInt(String.valueOf(field.get(entity)));
 
                 whereStatement += "`" + primaryColumnName + "`" + " = '" + primaryColumnValue + "'";
                 continue;
             }
 
+            Object value = field.get(entity);
+            if(value instanceof Date){
+                sqlUpdate += "`" + this.getFieldName(field) + "`" + " = '" + new SimpleDateFormat("yyyy-MM-dd").format(value) + "'";
+            }else{
+                sqlUpdate += "`" + field.getName() + "`" + " = " + "'" + value + "'";
+            }
+
+            if(i < fields.length - 1) {
+                sqlUpdate += ", ";
+            }
 
         }
+        sqlUpdate += " " + whereStatement;
 
-        return false;
+        return this.connection.prepareStatement(sqlUpdate).execute();
     }
 
     private <E> boolean doInsert(E entity, Field primary) throws IllegalAccessException, SQLException {
@@ -79,25 +92,30 @@ public class EntityManager implements DbContext {
         String values = "";
         for (int i = 0; i < fields.length; i++) {
             Field field = fields[i];
-
+            field.setAccessible(true);
             //if current field is not PK field
             if(!field.getName().equals(primary.getName())){
                 columns += "`" + this.getFieldName(field) + "`";
-                values += "`" + field.get(entity) + "`";
+
+                Object value = field.get(entity);
+                if(value instanceof Date){
+                    values += "'" + new SimpleDateFormat("yyyy-MM-dd").format(value) + "'";
+                }else{
+                    values += "'" + value + "'";
+                }
                 //add ", " after each field and value if it is not the last
                 if(i < fields.length - 1){
                     columns += ", ";
                     values += ", ";
                 }
             }
-
         }
         
         String sqlInsert = "INSERT INTO " + tableName + "("
                 + columns + ")"
-                + "VALUES(" + values + ")";
+                + " VALUES( " + values + " )";
 
-        return this.conncetion.prepareStatement(sqlInsert).execute();
+        return this.connection.prepareStatement(sqlInsert).execute();
     }
 
     @Override
@@ -152,7 +170,7 @@ public class EntityManager implements DbContext {
 
         sqlCreate += columns + ")";
         
-        return this.conncetion.prepareStatement(sqlCreate).execute();
+        return this.connection.prepareStatement(sqlCreate).execute();
     }
 
     private String getDatabaseType(Field field) {

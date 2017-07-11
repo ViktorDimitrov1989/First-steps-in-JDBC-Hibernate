@@ -15,8 +15,8 @@ public class DemoORM {
 
             EntityManager em = new EntityManager(Connector.getConnection());
 
-            User user = new User("Pesho", "12345", 28, new Date());
-
+            User user = new User("Iliqn1", "1231", 211, new Date());
+            user.setId(1);
             //TODO if there is no table - create, if obj exists - update else create it
             em.persist(user);
 
