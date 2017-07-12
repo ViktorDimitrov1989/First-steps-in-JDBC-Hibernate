@@ -132,7 +132,7 @@ public class Main {
     }
 
     private static void addMinionsToVillains(Statement statement) throws IOException, SQLException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+       /* BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         String[] minionTokens = reader.readLine().split(":")[1].trim().split("\\s+");
         String villainName = reader.readLine().split(":")[1].trim();
 
@@ -181,7 +181,7 @@ public class Main {
 
 
         statement.execute(String.format("INSERT INTO minions_villains(minion_id, villain_id) VALUES(%d, %d)", minionId, villainId));
-        System.out.printf("Successfully added %s to be minion of %s\n", minionName, villainName);
+        System.out.printf("Successfully added %s to be minion of %s\n", minionName, villainName);*/
     }
 
     private static int executeInsertQuery(String query, Statement statement) throws SQLException {
